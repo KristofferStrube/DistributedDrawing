@@ -1,0 +1,224 @@
+﻿@page "/"
+@inject NavigationManager NavigationManager
+@inject Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment IWebAssemblyHostEnvironment
+@implements IDisposable
+@using Blazor.Extensions
+@using Blazor.Extensions.Canvas.Canvas2D
+@using Microsoft.AspNetCore.SignalR.Client;
+@using DistributedDrawing.Shared
+@using System.Threading
+
+<div @onmousemove="MoveMouse" @onmousedown="DownMouse" @onmouseup="UpMouse" @onmouseout="UpMouse"
+     @ontouchmove="MoveTouch" @ontouchstart="DownTouch" @ontouchend="UpTouch" @ontouchleave="UpTouch"
+     style="border:2px solid black;display:inline-block;">
+    <BECanvas Width="800" Height="800" @ref="_canvasReference"></BECanvas>
+</div>
+<span>@status/@count lines</span>
+<button @onclick="@(e => Use(Tool.BlackPen))">Use Black pen</button>
+<button @onclick="@(e => Use(Tool.Eraser))">Use Eraser</button>
+<button @onclick="Clear">Clear Image</button>
+
+@code {
+    protected enum Tool
+    {
+        BlackPen,
+        Eraser
+    }
+
+    private Canvas2DContext _context;
+
+    protected BECanvas _canvasReference;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        _context = await this._canvasReference.CreateCanvas2DAsync();
+    }
+
+    protected bool flag = false;
+    protected bool dot_flag = false;
+
+    protected double prevX = 0;
+    protected double currX = 0;
+    protected double prevY = 0;
+    protected double currY = 0;
+
+    protected int count = 0;
+
+    protected int status = 0;
+
+    protected string color = "black";
+    protected float lineWidth = 2;
+
+    private async Task MoveMouse(MouseEventArgs e)
+    {
+        await Move(e.ClientX, e.ClientY);
+    }
+    private async Task MoveTouch(TouchEventArgs e)
+    {
+        await Move(e.Touches[0].ClientX, e.Touches[0].ClientY);
+    }
+    private async Task Move(double clientX, double clientY)
+    {
+        if (flag)
+        {
+            prevX = currX;
+            prevY = currY;
+            currX = clientX;
+            currY = clientY;
+            await Draw();
+            await hubConnection.SendAsync("Draw", prevX, prevY, currX, currY, color, lineWidth);
+            status++;
+            count++;
+            this.StateHasChanged();
+        }
+    }
+
+    private async Task DownMouse(MouseEventArgs e)
+    {
+        await Down(e.ClientX, e.ClientY);
+    }
+    private async Task DownTouch(TouchEventArgs e)
+    {
+        await Down(e.Touches[0].ClientX, e.Touches[0].ClientY);
+    }
+    private async Task Down(double clientX, double clientY)
+    {
+        prevX = currX;
+        prevY = currY;
+        currX = clientX;
+        currY = clientY;
+
+        flag = true;
+        dot_flag = true;
+        if (dot_flag)
+        {
+            await _context.BeginPathAsync();
+            await _context.SetFillStyleAsync(color);
+            await _context.FillRectAsync(currX, currY, 2, 2);
+            await _context.ClosePathAsync();
+            dot_flag = false;
+        }
+    }
+
+    private void UpMouse(MouseEventArgs e)
+    {
+        flag = false;
+    }
+    private void UpTouch(TouchEventArgs e)
+    {
+        flag = false;
+    }
+
+    private void Use(Tool tool)
+    {
+        switch (tool)
+        {
+            case Tool.BlackPen:
+                color = "black";
+                lineWidth = 2;
+                break;
+            default:
+                color = "white";
+                lineWidth = 10;
+                break;
+        }
+    }
+
+    private async Task Draw()
+    {
+        await _context.BeginPathAsync();
+        await _context.MoveToAsync(prevX, prevY);
+        await _context.LineToAsync(currX, currY);
+        await _context.SetStrokeStyleAsync(color);
+        await _context.SetLineWidthAsync(lineWidth);
+        await _context.StrokeAsync();
+        await _context.ClosePathAsync();
+    }
+
+    private HubConnection hubConnection;
+    private List<string> messages = new List<string>();
+    private string userInput;
+    private string messageInput;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/drawing/drawhub"))
+            //.WithUrl(NavigationManager.ToAbsoluteUri("/drawhub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<double, double, double, double, string, float>("ReceiveDraw", async (SprevX, SprevY, ScurrX, ScurrY, Scolor, SlineWidth) =>
+        {
+            await _context.BeginPathAsync();
+            await _context.MoveToAsync(SprevX, SprevY);
+            await _context.LineToAsync(ScurrX, ScurrY);
+            await _context.SetStrokeStyleAsync(Scolor);
+            await _context.SetLineWidthAsync(SlineWidth);
+            await _context.StrokeAsync();
+            await _context.ClosePathAsync();
+
+            status++;
+            count++;
+            this.StateHasChanged();
+        });
+
+        hubConnection.On("ReceiveClear", async () =>
+        {
+            await _context.ClearRectAsync(0, 0, 800, 800);
+            Console.WriteLine("received Clear");
+        });
+
+        await hubConnection.StartAsync();
+
+        count = await hubConnection.InvokeAsync<int>("CountLines");
+
+        var cancellationTokenSource = new CancellationTokenSource();
+        var stream = hubConnection.StreamAsync<Line>(
+            "StartLines", cancellationTokenSource.Token);
+
+        await foreach (Line line in stream)
+        {
+            await Draw(line);
+            status++;
+            this.StateHasChanged();
+        }
+    }
+
+    public async Task Draw(Line line)
+    {
+        await _context.BeginPathAsync();
+        await _context.MoveToAsync(line.prevX, line.prevY);
+        await _context.LineToAsync(line.currX, line.currY);
+        await _context.SetStrokeStyleAsync(line.color);
+        await _context.SetLineWidthAsync(line.lineWidth);
+        await _context.StrokeAsync();
+        await _context.ClosePathAsync();
+        await Task.CompletedTask;
+    }
+
+    protected async Task Save()
+    {
+        await hubConnection.SendAsync("Save");
+    }
+
+    protected async Task Load()
+    {
+        await hubConnection.SendAsync("Load");
+    }
+
+    protected async Task Clear()
+    {
+        await hubConnection.SendAsync("Clear");
+        Console.WriteLine("Send Clear");
+    }
+
+    public bool IsConnected =>
+hubConnection.State == HubConnectionState.Connected;
+
+    public void Dispose()
+    {
+        _ = hubConnection.DisposeAsync();
+    }
+}
