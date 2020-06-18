@@ -54,11 +54,11 @@ namespace DistributedDrawing.Server
 
             app.UseRouting();
 
-            app.UsePathBase("/DistributedDrawing");
+            app.UsePathBase("/drawing");
 
             app.Use((context, next) =>
             {
-                context.Request.PathBase = "/DistributedDrawing";
+                context.Request.PathBase = "/drawing";
                 return next();
             });
 

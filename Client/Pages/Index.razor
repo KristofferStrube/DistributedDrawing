@@ -144,7 +144,8 @@
     {
 
         hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/DistributedDrawing/drawhub"))
+            .WithUrl(NavigationManager.ToAbsoluteUri("/drawhub"))
+            //.WithUrl(NavigationManager.ToAbsoluteUri("/drawing/drawhub"))
             .WithAutomaticReconnect()
             .Build();
 
