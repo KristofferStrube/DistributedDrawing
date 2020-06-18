@@ -54,14 +54,6 @@ namespace DistributedDrawing.Server
 
             app.UseRouting();
 
-            app.UsePathBase("/drawing");
-
-            app.Use((context, next) =>
-            {
-                context.Request.PathBase = "/drawing";
-                return next();
-            });
-
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<DrawHub>("/drawhub");
