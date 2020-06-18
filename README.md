@@ -1,1 +1,1 @@
-A project for testing hosting of .NET Core applications on GitHub Actions and to test the compatibility with file writing, service workers and websocket connections.
+A project for testing hosting of .NET Core applications on GitHub Actions and to test the compatibility with file writing, service workers and websocket connections. 
