@@ -14,10 +14,6 @@ jobs:
           with:
             dotnet-version: 5.0.100
 
-        # Run tests
-        - name: Test
-          run: dotnet test
-
         # Generate the website
         - name: Publish
           run: dotnet publish example/DistributedDrawing.Example.csproj --configuration Release --output build
