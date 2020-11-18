@@ -1,10 +1,5 @@
 name: 'Publish application'
-on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**/*.md'
+on: push
 
 jobs:
   build:
