@@ -141,7 +141,7 @@
     protected override async Task OnInitializedAsync()
     {
         hubConnection = new HubConnectionBuilder()
-            .WithUrl("https://localhost:44365/drawHub")
+            .WithUrl("https://kristoffer-strube.dk/API/drawHub")
             .WithAutomaticReconnect()
             .Build();
 
