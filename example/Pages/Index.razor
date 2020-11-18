@@ -1,11 +1,7 @@
 ﻿@page "/"
-@inject NavigationManager NavigationManager
-@inject Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment IWebAssemblyHostEnvironment
-@implements IDisposable
 @using Blazor.Extensions
 @using Blazor.Extensions.Canvas.Canvas2D
 @using Microsoft.AspNetCore.SignalR.Client;
-@using DistributedDrawing.Shared
 @using System.Threading
 
 <div @onmousemove="MoveMouse" @onmousedown="DownMouse" @onmouseup="UpMouse" @onmouseout="UpMouse"
@@ -13,10 +9,12 @@
      style="border:2px solid black;display:inline-block;">
     <BECanvas Width="800" Height="800" @ref="_canvasReference"></BECanvas>
 </div>
-<span>@status/@count lines</span>
-<button @onclick="@(e => Use(Tool.BlackPen))">Use Black pen</button>
-<button @onclick="@(e => Use(Tool.Eraser))">Use Eraser</button>
-<button @onclick="Clear">Clear Image</button>
+<div>
+    <span>@status/@count lines</span>
+    <button @onclick="@(e => Use(Tool.BlackPen))">Use Black pen</button>
+    <button @onclick="@(e => Use(Tool.Eraser))">Use Eraser</button>
+    <button @onclick="Clear">Clear Image</button>
+</div>
 
 @code {
     protected enum Tool
@@ -27,7 +25,7 @@
 
     private Canvas2DContext _context;
 
-    protected BECanvas _canvasReference;
+    protected BECanvasComponent _canvasReference;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -142,10 +140,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-
         hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/drawhub"))
-            //.WithUrl(NavigationManager.ToAbsoluteUri("/drawing/drawhub"))
+            .WithUrl("https://localhost:44365/drawHub")
             .WithAutomaticReconnect()
             .Build();
 
@@ -167,7 +163,9 @@
         hubConnection.On("ReceiveClear", async () =>
         {
             await _context.ClearRectAsync(0, 0, 800, 800);
-            Console.WriteLine("received Clear");
+            count = 0;
+            status = 0;
+            StateHasChanged();
         });
 
         await hubConnection.StartAsync();
@@ -198,27 +196,31 @@
         await Task.CompletedTask;
     }
 
-    protected async Task Save()
-    {
-        await hubConnection.SendAsync("Save");
-    }
-
-    protected async Task Load()
-    {
-        await hubConnection.SendAsync("Load");
-    }
-
     protected async Task Clear()
     {
         await hubConnection.SendAsync("Clear");
-        Console.WriteLine("Send Clear");
     }
 
     public bool IsConnected =>
 hubConnection.State == HubConnectionState.Connected;
 
-    public void Dispose()
+    public class Line
     {
-        _ = hubConnection.DisposeAsync();
+        public Line() { }
+        public Line(double prevX, double prevY, double currX, double currY, string color, float lineWidth)
+        {
+            this.prevX = prevX;
+            this.prevY = prevY;
+            this.currX = currX;
+            this.currY = currY;
+            this.color = color;
+            this.lineWidth = lineWidth;
+        }
+        public double prevX { get; set; }
+        public double currX { get; set; }
+        public double prevY { get; set; }
+        public double currY { get; set; }
+        public string color { get; set; }
+        public float lineWidth { get; set; }
     }
 }
