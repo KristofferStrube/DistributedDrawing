@@ -12,6 +12,7 @@
 <div>
     <span>@status/@count lines</span>
     <button @onclick="@(e => Use(Tool.BlackPen))">Use Black pen</button>
+    <button @onclick="@(e => Use(Tool.RedPen))">Use Red pen</button>
     <button @onclick="@(e => Use(Tool.Eraser))">Use Eraser</button>
     <button @onclick="Clear">Clear Image</button>
 </div>
@@ -20,6 +21,7 @@
     protected enum Tool
     {
         BlackPen,
+        RedPen,
         Eraser
     }
 
@@ -113,6 +115,10 @@
         {
             case Tool.BlackPen:
                 color = "black";
+                lineWidth = 2;
+                break;
+            case Tool.RedPen:
+                color = "red";
                 lineWidth = 2;
                 break;
             default:
