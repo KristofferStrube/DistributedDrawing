@@ -151,6 +151,8 @@
             .WithAutomaticReconnect()
             .Build();
 
+        hubConnection.Closed += (err) => { async Task Run() { Console.WriteLine(err); }; return Run(); };
+
         hubConnection.On<double, double, double, double, string, float>("ReceiveDraw", async (SprevX, SprevY, ScurrX, ScurrY, Scolor, SlineWidth) =>
         {
             await _context.BeginPathAsync();
