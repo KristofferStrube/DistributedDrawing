@@ -18,6 +18,7 @@
         } else if (path[1].length != 0) {
             window.location.replace(window.location.href + "/");
         }
+        document.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
     </script>
 </head>
 
