@@ -1,10 +1,5 @@
 name: 'Publish application'
-on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**/*.md'
+on: push
 
 jobs:
   build:
@@ -18,10 +13,6 @@ jobs:
           uses: actions/setup-dotnet@v1
           with:
             dotnet-version: 5.0.100
-
-        # Run tests
-        - name: Test
-          run: dotnet test
 
         # Generate the website
         - name: Publish
