@@ -1,1 +1,6 @@
-A project for testing Blazor applications and the interaction with the BlazorExtension Canvas and SignalR in Blazor clients and streaming through these.
+# DistributedDrawing
+A distributed very simple drawing tool that uses an external SignalR Hub to sync drawings between clients. It also saves the drawings automaticly.
+
+# Demo
+It can be demoed at [kristofferstrube.github.io/DistributedDrawing](https://kristofferstrube.github.io/DistributedDrawing/)
+
