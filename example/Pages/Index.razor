@@ -3,6 +3,7 @@
 @using System.Threading;
 @using Microsoft.JSInterop;
 @inject IJSRuntime JSRuntime
+@inject HttpClient httpClient
 
 <div id="canv" @onmousemove="MoveMouse" @onmousedown="DownMouse" @onmouseup="UpMouse"
      @ontouchmove="MoveTouch" @ontouchstart="DownTouch" @ontouchend="UpTouch"
@@ -16,6 +17,10 @@
     <button @onclick="@(e => Use(Tool.RedPen))">Use Red pen</button>
     <button @onclick="@(e => Use(Tool.Eraser))">Use Eraser</button>
     <button @onclick="Clear">Clear Image</button>
+    @foreach(string user in Users)
+    {
+        <span><img src=@($"https://www.countryflags.io/{user}/flat/64.png") height="35px" width="35px" /></span>
+    }
 </div>
 
 @code {
@@ -27,6 +32,9 @@
     }
 
     protected List<Line> Lines = new List<Line>();
+
+    protected List<string> Users = new List<string>();
+
     protected bool flag = false;
     protected bool dot_flag = false;
 
@@ -127,6 +135,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        CountryResp countryResp = await httpClient.GetFromJsonAsync<CountryResp>("https://get.geojs.io/v1/ip/country.json");
+
         SVG = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/SVGInterface.js").AsTask();
 
         hubConnection = new HubConnectionBuilder()
@@ -156,9 +166,18 @@
             StateHasChanged();
         });
 
+        hubConnection.On<List<string>>("ReceiveUsers", async (users) =>
+        {
+            Users = users;
+            StateHasChanged();
+        });
+
         await hubConnection.StartAsync();
 
         count = await hubConnection.InvokeAsync<int>("CountLines");
+
+        Console.WriteLine(countryResp.country);
+        Users = await hubConnection.InvokeAsync<List<string>>("StartUsers", countryResp.country);
 
         var cancellationTokenSource = new CancellationTokenSource();
         var stream = hubConnection.StreamAsync<Line>(
@@ -205,5 +224,10 @@ hubConnection.State == HubConnectionState.Connected;
         public double currY { get; set; }
         public string color { get; set; }
         public float lineWidth { get; set; }
+    }
+
+    private class CountryResp
+    {
+        public string country { get; set; }
     }
 }
