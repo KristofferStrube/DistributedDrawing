@@ -65,21 +65,7 @@
             var addedLine = new Line(prevX, prevY, currX, currY, color, lineWidth);
             Lines.Add(addedLine);
 
-            if (color != "white")
-            {
-                await Draw(addedLine);
-            }
-            else
-            {
-                Lines.ForEach(async line =>
-                {
-                    if (doIntersect(prevX, prevY, currX, currY, line.prevX, line.prevY, line.currX, line.currY))
-                    {
-                        await SVG.InvokeVoidAsync("removeLine", (line.prevX + line.prevY + line.currX + line.currY));
-                    }
-                });
-                Lines.RemoveAll(line => doIntersect(prevX, prevY, currX, currY, line.prevX, line.prevY, line.currX, line.currY));
-            }
+            await Draw(addedLine);
             await hubConnection.SendAsync("Draw", prevX, prevY, currX, currY, color, lineWidth);
 
             status++;
@@ -219,69 +205,5 @@ hubConnection.State == HubConnectionState.Connected;
         public double currY { get; set; }
         public string color { get; set; }
         public float lineWidth { get; set; }
-    }
-
-    // Given three colinear points p, q, r, the function checks if
-    // point q lies on line segment 'pr'
-    static Boolean onSegment(double px, double py, double qx, double qy, double rx, double ry)
-    {
-        if (qx <= Math.Max(px, rx) && qx >= Math.Min(px, rx) &&
-            qy <= Math.Max(py, ry) && qy >= Math.Min(py, ry))
-            return true;
-
-        return false;
-    }
-
-    // To find orientation of ordered triplet (p, q, r).
-    // The function returns following values
-    // 0 --> p, q and r are colinear
-    // 1 --> Clockwise
-    // 2 --> Counterclockwise
-    static int orientation(double px, double py, double qx, double qy, double rx, double ry)
-    {
-        // See https://www.geeksforgeeks.org/orientation-3-ordered-points/
-        // for details of below formula.
-        double val = (qy - py) * (rx - qx) -
-                (qx - px) * (ry - qy);
-
-        if (val == 0) return 0; // colinear
-
-        return (val > 0) ? 1 : 2; // clock or counterclock wise
-    }
-
-    // The main function that returns true if line segment 'p1q1'
-    // and 'p2q2' intersect.
-    static Boolean doIntersect(double p1x, double p1y, double q1x, double q1y, double p2x, double p2y, double q2x, double q2y)
-    {
-        // Find the four orientations needed for general and
-        // special cases
-        int o1 = orientation(p1x, p1y, q1x, q1y, p2x, p2y);
-        int o2 = orientation(p1x, p1y, q1x, q1y, q2x, q2y);
-        int o3 = orientation(p2x, p2y, q2x, q2y, p1x, p1x);
-        int o4 = orientation(p2x, p2y, q2x, q2y, q1x, q1y);
-
-        // General case
-        if (o1 != o2 && o3 != o4)
-            return true;
-
-        // Special Cases
-        // p1x, p1y, q1x, q1y and q2x, q2y are colinear and q2x, q2y lies on segment p1x, p1yq1x, q1y
-        if (o2 == 0 && onSegment(p1x, p1y, q2x, q2y, q1x, q1y)) return true;
-
-        // p2x, p2y, q2x, q2y and p1x, p1y are colinear and p1x, p1y lies on segment p2x, p2yq2x, q2y
-        if (o3 == 0 && onSegment(p2x, p2y, p1x, p1y, q2x, q2y)) return true;
-
-        // p2x, p2y, q2x, q2y and q1x, q1y are colinear and q1x, q1y lies on segment p2x, p2yq2x, q2y
-        if (o4 == 0 && onSegment(p2x, p2y, q1x, q1y, q2x, q2y)) return true;
-
-        return false; // Doesn't fall in any of the above cases
-    }
-
-    static Boolean interSectionIsInLineInterval(double p1x, double p1y, double q1x, double q1y, double p2x, double p2y, double q2x, double q2y)
-    {
-        if (doIntersect(double p1x, double p1y, double q1x, double q1y, double p2x, double p2y, double q2x, double q2y))
-        {
-
-        }
     }
 }
