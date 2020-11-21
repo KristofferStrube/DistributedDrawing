@@ -1,14 +1,14 @@
 ﻿@page "/"
-@using Blazor.Extensions
-@using Blazor.Extensions.Canvas.Canvas2D
 @using Microsoft.AspNetCore.SignalR.Client;
 @using System.Threading;
+@using Microsoft.JSInterop;
 @inject IJSRuntime JSRuntime
 
-<div id="canv" @onmousemove="MoveMouse" @onmousedown="DownMouse" @onmouseup="UpMouse" @onmouseout="UpMouse"
-     @ontouchmove="MoveTouch" @ontouchstart="DownTouch" @ontouchend="UpTouch" @ontouchleave="UpTouch"
+<div id="canv" @onmousemove="MoveMouse" @onmousedown="DownMouse" @onmouseup="UpMouse"
+     @ontouchmove="MoveTouch" @ontouchstart="DownTouch" @ontouchend="UpTouch"
      style="border:2px solid black;display:inline-block;max-height:80vh;max-width:100vw;overflow:hidden;">
-    <BECanvas Width="800" Height="800" @ref="_canvasReference"></BECanvas>
+    <svg style="width:800px; height:800px;" id="svg">
+    </svg>
 </div>
 <div>
     <span>@status/@count lines</span>
@@ -26,15 +26,7 @@
         Eraser
     }
 
-    private Canvas2DContext _context;
-
-    protected BECanvasComponent _canvasReference;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        _context = await this._canvasReference.CreateCanvas2DAsync();
-    }
-
+    protected List<Line> Lines = new List<Line>();
     protected bool flag = false;
     protected bool dot_flag = false;
 
@@ -49,6 +41,9 @@
 
     protected string color = "black";
     protected float lineWidth = 2;
+
+    private IJSObjectReference SVG;
+    protected System.Runtime.Serialization.IObjectReference SVGElement;
 
     private async Task MoveMouse(MouseEventArgs e)
     {
@@ -66,8 +61,27 @@
             prevY = currY;
             currX = clientX;
             currY = clientY;
-            await Draw();
+
+            var addedLine = new Line(prevX, prevY, currX, currY, color, lineWidth);
+            Lines.Add(addedLine);
+
+            if (color != "white")
+            {
+                await Draw(addedLine);
+            }
+            else
+            {
+                Lines.ForEach(async line =>
+                {
+                    if (doIntersect(prevX, prevY, currX, currY, line.prevX, line.prevY, line.currX, line.currY))
+                    {
+                        await SVG.InvokeVoidAsync("removeLine", (line.prevX + line.prevY + line.currX + line.currY));
+                    }
+                });
+                Lines.RemoveAll(line => doIntersect(prevX, prevY, currX, currY, line.prevX, line.prevY, line.currX, line.currY));
+            }
             await hubConnection.SendAsync("Draw", prevX, prevY, currX, currY, color, lineWidth);
+
             status++;
             count++;
             this.StateHasChanged();
@@ -90,15 +104,6 @@
         currY = clientY;
 
         flag = true;
-        dot_flag = true;
-        if (dot_flag)
-        {
-            await _context.BeginPathAsync();
-            await _context.SetFillStyleAsync(color);
-            await _context.FillRectAsync(currX, currY, 2, 2);
-            await _context.ClosePathAsync();
-            dot_flag = false;
-        }
     }
 
     private void UpMouse(MouseEventArgs e)
@@ -129,17 +134,6 @@
         }
     }
 
-    private async Task Draw()
-    {
-        await _context.BeginPathAsync();
-        await _context.MoveToAsync(prevX, prevY);
-        await _context.LineToAsync(currX, currY);
-        await _context.SetStrokeStyleAsync(color);
-        await _context.SetLineWidthAsync(lineWidth);
-        await _context.StrokeAsync();
-        await _context.ClosePathAsync();
-    }
-
     private HubConnection hubConnection;
     private List<string> messages = new List<string>();
     private string userInput;
@@ -147,6 +141,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        SVG = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/SVGInterface.js").AsTask();
+
         hubConnection = new HubConnectionBuilder()
             .WithUrl("https://kristoffer-strube.dk/API/drawHub")
             .WithAutomaticReconnect()
@@ -156,13 +152,9 @@
 
         hubConnection.On<double, double, double, double, string, float>("ReceiveDraw", async (SprevX, SprevY, ScurrX, ScurrY, Scolor, SlineWidth) =>
         {
-            await _context.BeginPathAsync();
-            await _context.MoveToAsync(SprevX, SprevY);
-            await _context.LineToAsync(ScurrX, ScurrY);
-            await _context.SetStrokeStyleAsync(Scolor);
-            await _context.SetLineWidthAsync(SlineWidth);
-            await _context.StrokeAsync();
-            await _context.ClosePathAsync();
+            var addedLine = new Line(SprevX, SprevY, ScurrX, ScurrY, Scolor, SlineWidth);
+            Lines.Add(addedLine);
+            await Draw(addedLine);
 
             status++;
             count++;
@@ -171,7 +163,8 @@
 
         hubConnection.On("ReceiveClear", async () =>
         {
-            await _context.ClearRectAsync(0, 0, 800, 800);
+            Lines.Clear();
+            await SVG.InvokeVoidAsync("clear");
             count = 0;
             status = 0;
             StateHasChanged();
@@ -189,19 +182,14 @@
         {
             await Draw(line);
             status++;
-            this.StateHasChanged();
+            StateHasChanged();
         }
     }
 
     public async Task Draw(Line line)
     {
-        await _context.BeginPathAsync();
-        await _context.MoveToAsync(line.prevX, line.prevY);
-        await _context.LineToAsync(line.currX, line.currY);
-        await _context.SetStrokeStyleAsync(line.color);
-        await _context.SetLineWidthAsync(line.lineWidth);
-        await _context.StrokeAsync();
-        await _context.ClosePathAsync();
+        await SVG.InvokeVoidAsync("addLine", (line.prevX + line.prevY + line.currX + line.currY), line.prevX, line.prevY, line.currX, line.currY, $"stroke:{line.color};stroke-width:{line.lineWidth};");
+        Lines.Add(line);
         await Task.CompletedTask;
     }
 
@@ -231,5 +219,69 @@ hubConnection.State == HubConnectionState.Connected;
         public double currY { get; set; }
         public string color { get; set; }
         public float lineWidth { get; set; }
+    }
+
+    // Given three colinear points p, q, r, the function checks if
+    // point q lies on line segment 'pr'
+    static Boolean onSegment(double px, double py, double qx, double qy, double rx, double ry)
+    {
+        if (qx <= Math.Max(px, rx) && qx >= Math.Min(px, rx) &&
+            qy <= Math.Max(py, ry) && qy >= Math.Min(py, ry))
+            return true;
+
+        return false;
+    }
+
+    // To find orientation of ordered triplet (p, q, r).
+    // The function returns following values
+    // 0 --> p, q and r are colinear
+    // 1 --> Clockwise
+    // 2 --> Counterclockwise
+    static int orientation(double px, double py, double qx, double qy, double rx, double ry)
+    {
+        // See https://www.geeksforgeeks.org/orientation-3-ordered-points/
+        // for details of below formula.
+        double val = (qy - py) * (rx - qx) -
+                (qx - px) * (ry - qy);
+
+        if (val == 0) return 0; // colinear
+
+        return (val > 0) ? 1 : 2; // clock or counterclock wise
+    }
+
+    // The main function that returns true if line segment 'p1q1'
+    // and 'p2q2' intersect.
+    static Boolean doIntersect(double p1x, double p1y, double q1x, double q1y, double p2x, double p2y, double q2x, double q2y)
+    {
+        // Find the four orientations needed for general and
+        // special cases
+        int o1 = orientation(p1x, p1y, q1x, q1y, p2x, p2y);
+        int o2 = orientation(p1x, p1y, q1x, q1y, q2x, q2y);
+        int o3 = orientation(p2x, p2y, q2x, q2y, p1x, p1x);
+        int o4 = orientation(p2x, p2y, q2x, q2y, q1x, q1y);
+
+        // General case
+        if (o1 != o2 && o3 != o4)
+            return true;
+
+        // Special Cases
+        // p1x, p1y, q1x, q1y and q2x, q2y are colinear and q2x, q2y lies on segment p1x, p1yq1x, q1y
+        if (o2 == 0 && onSegment(p1x, p1y, q2x, q2y, q1x, q1y)) return true;
+
+        // p2x, p2y, q2x, q2y and p1x, p1y are colinear and p1x, p1y lies on segment p2x, p2yq2x, q2y
+        if (o3 == 0 && onSegment(p2x, p2y, p1x, p1y, q2x, q2y)) return true;
+
+        // p2x, p2y, q2x, q2y and q1x, q1y are colinear and q1x, q1y lies on segment p2x, p2yq2x, q2y
+        if (o4 == 0 && onSegment(p2x, p2y, q1x, q1y, q2x, q2y)) return true;
+
+        return false; // Doesn't fall in any of the above cases
+    }
+
+    static Boolean interSectionIsInLineInterval(double p1x, double p1y, double q1x, double q1y, double p2x, double p2y, double q2x, double q2y)
+    {
+        if (doIntersect(double p1x, double p1y, double q1x, double q1y, double p2x, double p2y, double q2x, double q2y))
+        {
+
+        }
     }
 }
