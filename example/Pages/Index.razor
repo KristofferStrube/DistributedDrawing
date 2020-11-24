@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.SignalR.Client;
 @using System.Threading;
 @using Microsoft.JSInterop;
+@using BlazorColorPicker
 @inject IJSRuntime JSRuntime
 @inject HttpClient httpClient
 
@@ -13,30 +14,27 @@
 </div>
 <div>
     <span>@status/@count lines</span>
-    <button @onclick="@(e => Use(Tool.BlackPen))">Use Black pen</button>
-    <button @onclick="@(e => Use(Tool.RedPen))">Use Red pen</button>
-    <button @onclick="@(e => Use(Tool.Eraser))">Use Eraser</button>
-    <button @onclick="Clear">Clear Image</button>
-    @foreach(string user in Users)
+    <button class="btn btn-primary" @onclick="OpenColorModal">
+        <div style="background-color:@color" class="buttonColor"></div> Select a Color
+    </button>
+    <ColorPicker IsOpened="colorPickerOpened" Closed="UseColor" MyColor="@color"></ColorPicker>
+    <button class="btn btn-danger" @onclick="Clear">Clear Image</button>
+    @foreach (string user in Users)
     {
-        <span><img src=@($"https://www.countryflags.io/{user}/flat/64.png") height="35px" width="35px" /></span>
+        <span class="badge badge-secondary" style="margin-left:4px;"><img src=@($"https://www.countryflags.io/{user}/flat/64.png") height="32px" width="32px" title=@($"User from {user}") /></span>
     }
 </div>
 
 @code {
-    protected enum Tool
-    {
-        BlackPen,
-        RedPen,
-        Eraser
-    }
-
     protected List<Line> Lines = new List<Line>();
+
+    private List<string> _users = new List<string>();
 
     protected List<string> Users = new List<string>();
 
     protected bool flag = false;
-    protected bool dot_flag = false;
+
+    protected bool colorPickerOpened = false;
 
     protected double prevX = 0;
     protected double currX = 0;
@@ -47,7 +45,7 @@
 
     protected int status = 0;
 
-    protected string color = "black";
+    protected string color = "#000000";
     protected float lineWidth = 2;
 
     private IJSObjectReference SVG;
@@ -109,23 +107,24 @@
         flag = false;
     }
 
-    private void Use(Tool tool)
+    void OpenColorModal()
     {
-        switch (tool)
+        colorPickerOpened = true;
+    }
+
+    private void UseColor(string value)
+    {
+        if (value == "#FFFFFF")
         {
-            case Tool.BlackPen:
-                color = "black";
-                lineWidth = 2;
-                break;
-            case Tool.RedPen:
-                color = "red";
-                lineWidth = 2;
-                break;
-            default:
-                color = "white";
-                lineWidth = 10;
-                break;
+            color = "white";
+            lineWidth = 10;
         }
+        else
+        {
+            color = value;
+            lineWidth = 2;
+        }
+        colorPickerOpened = false;
     }
 
     private HubConnection hubConnection;
