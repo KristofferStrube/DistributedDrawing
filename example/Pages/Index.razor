@@ -21,7 +21,7 @@
     <button class="btn btn-danger" @onclick="Clear">Clear Image</button>
     @foreach (string user in Users)
     {
-        <span class="badge badge-secondary" style="margin-left:4px;"><img src=@($"https://www.countryflags.io/{user}/flat/64.png") height="32px" width="32px" title=@($"User from {user}") /></span>
+        <span class="badge badge-secondary" style="margin-left:4px;">@user</span>
     }
 </div>
 
@@ -134,8 +134,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        CountryResp countryResp = await httpClient.GetFromJsonAsync<CountryResp>("https://get.geojs.io/v1/ip/country.json");
-
         SVG = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/SVGInterface.js").AsTask();
 
         hubConnection = new HubConnectionBuilder()
@@ -175,8 +173,7 @@
 
         count = await hubConnection.InvokeAsync<int>("CountLines");
 
-        Console.WriteLine(countryResp.country);
-        Users = await hubConnection.InvokeAsync<List<string>>("StartUsers", countryResp.country);
+        Users = await hubConnection.InvokeAsync<List<string>>("StartUsers", Guid.NewGuid().ToString().Substring(0, 4));
 
         var cancellationTokenSource = new CancellationTokenSource();
         var stream = hubConnection.StreamAsync<Line>(
