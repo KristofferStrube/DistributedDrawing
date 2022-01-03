@@ -11,9 +11,9 @@ The first approach was to add a `@foreach` loop that renders `<Line />` tags in 
 
 Next I looked at using the [Canvas](https://github.com/BlazorExtensions/Canvas) package by the people behind [BlazorExtensions](https://github.com/BlazorExtensions). This used a canvas instead to render lines which is very effective compared to SVG elements. I had a working version of this, but I did not continue with this as I wanted to be able to potentially manipulate the drawn elements in the future without having to learn how to use graphics libraries.
 
-In the end I ended up using JSInterop to add/clear `<Line />` tags from JavaScript, so that I knew that Blazor would not handle when these are rendered.
+Next I looked at using JSInterop to add/clear `<Line />` tags from JavaScript, so that I knew that Blazor would not handle when these are rendered.
 
-I have later found that you can do this smarter by creating a component for a `Line` and then overriding its `ShouldRerender` like I helped doing in [PetaBridge](https://github.com/petabridge)'s project [DrawTogether.NET](https://github.com/petabridge/DrawTogether.NET/blob/dev/src/DrawTogether.UI/Server/Components/Curve.razor#L16).
+I have later found that you can do this smarter by creating a component for a SVG `line` like I helped doing in [PetaBridge](https://github.com/petabridge)'s project [DrawTogether.NET](https://github.com/petabridge/DrawTogether.NET/blob/dev/src/DrawTogether.UI/Server/Components/Curve.razor#L16).
 
 ## Backend
 The backend is not part of this repo, but it not the most complex if you are familiar to SignalR.

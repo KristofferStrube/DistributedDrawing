@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.31911.260
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DistributedDrawing.Example", "example\DistributedDrawing.Example.csproj", "{6AAA0989-A586-4D04-BFBE-DE86126CF5DF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6AAA0989-A586-4D04-BFBE-DE86126CF5DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AAA0989-A586-4D04-BFBE-DE86126CF5DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AAA0989-A586-4D04-BFBE-DE86126CF5DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AAA0989-A586-4D04-BFBE-DE86126CF5DF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8342DBB2-B204-4FCA-A345-80D8280F8C5E}
+	EndGlobalSection
+EndGlobal

@@ -1,15 +1,16 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.SignalR.Client;
 @using System.Threading;
-@using Microsoft.JSInterop;
 @using BlazorColorPicker
-@inject IJSRuntime JSRuntime
-@inject HttpClient httpClient
 
 <div id="canv" @onmousemove="MoveMouse" @onmousedown="DownMouse" @onmouseup="UpMouse"
      @ontouchmove="MoveTouch" @ontouchstart="DownTouch" @ontouchend="UpTouch"
      style="border:2px solid black;display:inline-block;max-height:80vh;max-width:100vw;overflow:hidden;">
-    <svg style="width:800px; height:800px;" id="svg">
+    <svg style="width:800px; height:800px;">
+        @foreach (var line in Lines)
+        {
+            <LineComponent X1=@line.prevX Y1=@line.prevY X2=@line.currX Y2=@line.currY Stroke=@line.color StrokeWidth=@line.lineWidth />
+        }
     </svg>
 </div>
 <div>
@@ -28,8 +29,6 @@
 @code {
     protected List<Line> Lines = new List<Line>();
 
-    private List<string> _users = new List<string>();
-
     protected List<string> Users = new List<string>();
 
     protected bool flag = false;
@@ -47,9 +46,6 @@
 
     protected string color = "#000000";
     protected float lineWidth = 2;
-
-    private IJSObjectReference SVG;
-    protected System.Runtime.Serialization.IObjectReference SVGElement;
 
     private async Task MoveMouse(MouseEventArgs e)
     {
@@ -71,7 +67,6 @@
             var addedLine = new Line(prevX, prevY, currX, currY, color, lineWidth);
             Lines.Add(addedLine);
 
-            await Draw(addedLine);
             await hubConnection.SendAsync("Draw", prevX, prevY, currX, currY, color, lineWidth);
 
             status++;
@@ -134,20 +129,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        SVG = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/SVGInterface.js").AsTask();
-
         hubConnection = new HubConnectionBuilder()
             .WithUrl("https://kristoffer-strube.dk/API/drawHub")
             .WithAutomaticReconnect()
             .Build();
 
-        hubConnection.Closed += (err) => { async Task Run() { Console.WriteLine(err); }; return Run(); };
+        hubConnection.Closed += async (err) => Console.WriteLine(err);
 
         hubConnection.On<double, double, double, double, string, float>("ReceiveDraw", async (SprevX, SprevY, ScurrX, ScurrY, Scolor, SlineWidth) =>
         {
             var addedLine = new Line(SprevX, SprevY, ScurrX, ScurrY, Scolor, SlineWidth);
             Lines.Add(addedLine);
-            await Draw(addedLine);
 
             status++;
             count++;
@@ -157,7 +149,6 @@
         hubConnection.On("ReceiveClear", async () =>
         {
             Lines.Clear();
-            await SVG.InvokeVoidAsync("clear");
             count = 0;
             status = 0;
             StateHasChanged();
@@ -181,17 +172,10 @@
 
         await foreach (Line line in stream)
         {
-            await Draw(line);
+            Lines.Add(line);
             status++;
             StateHasChanged();
         }
-    }
-
-    public async Task Draw(Line line)
-    {
-        await SVG.InvokeVoidAsync("addLine", (line.prevX + line.prevY + line.currX + line.currY), line.prevX, line.prevY, line.currX, line.currY, $"stroke:{line.color};stroke-width:{line.lineWidth};");
-        Lines.Add(line);
-        await Task.CompletedTask;
     }
 
     protected async Task Clear()
@@ -200,7 +184,7 @@
     }
 
     public bool IsConnected =>
-hubConnection.State == HubConnectionState.Connected;
+    hubConnection.State == HubConnectionState.Connected;
 
     public class Line
     {
@@ -220,10 +204,5 @@ hubConnection.State == HubConnectionState.Connected;
         public double currY { get; set; }
         public string color { get; set; }
         public float lineWidth { get; set; }
-    }
-
-    private class CountryResp
-    {
-        public string country { get; set; }
     }
 }
