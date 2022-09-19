@@ -165,6 +165,7 @@
         count = await hubConnection.InvokeAsync<int>("CountLines");
 
         Users = await hubConnection.InvokeAsync<List<string>>("StartUsers", Guid.NewGuid().ToString().Substring(0, 4));
+        StateHasChanged();
 
         var cancellationTokenSource = new CancellationTokenSource();
         var stream = hubConnection.StreamAsync<Line>(
