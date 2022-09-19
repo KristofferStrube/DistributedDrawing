@@ -174,8 +174,9 @@
         {
             Lines.Add(line);
             status++;
-            StateHasChanged();
+            await Task.Yield();
         }
+        StateHasChanged();
     }
 
     protected async Task Clear()
