@@ -16,7 +16,7 @@ Next I looked at using JSInterop to add/clear `<Line />` tags from JavaScript, s
 I have later found that you can do this smarter by creating a component for a SVG `line` like I helped doing in [PetaBridge](https://github.com/petabridge)'s project [DrawTogether.NET](https://github.com/petabridge/DrawTogether.NET/blob/dev/src/DrawTogether.UI/Server/Components/Curve.razor#L16).
 
 ## Backend
-The backend is not part of this repo, but it not the most complex if you are familiar with SignalR.
+The backend is not part of this repo, but it's not the most complex if you are familiar with SignalR.
 
 ```csharp
 public class StaticStorage
